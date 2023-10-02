@@ -2,6 +2,7 @@
 
 require 'sinatra'
 require 'sinatra/reloader'
+require 'sinatra/content_for'
 require 'tilt/erubis'
 
 configure do
@@ -17,15 +18,24 @@ get '/' do
   redirect '/lists'
 end
 
-# GET    /lists          --> view all lists
-# GET    /lists/new      --> new list form
-# POST   /lists          --> create new lists
-# GET    /lists/1....    --> View a single list
+# GET    /lists                  --> view all lists
+# GET    /lists/new              --> new list form
+# POST   /lists                  --> create new lists
+# GET    /lists/1....            --> view a single list
+# GET    /list/(list number)     --> display the `todos` in the current list
 
 # views all of the lists
 get '/lists' do
   @lists = session[:lists]
   erb :lists, layout: :layout
+end
+
+# render the todo list
+get "/lists/:id" do
+  id = params[:id].to_i
+  @list = session[:lists][id]
+
+  erb :list, layout: :layout
 end
 
 # render the new list form
