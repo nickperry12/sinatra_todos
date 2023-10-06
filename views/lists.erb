@@ -1,10 +1,6 @@
 <ul id="lists">
   <% @lists.each_with_index do |list, idx| %>
-    <% if all_todos_completed?(list[:todos]) %>
-    <li class="complete">
-    <% else %>
-    <li>
-    <% end %>
+    <li class="<%= list_class(list[:todos]) %>">
       <a href="/lists/<%= idx %>">
         <h2><%= list[:name] %></h2>
         <p><%= display_num_completed_todos(list[:todos] )%></p>

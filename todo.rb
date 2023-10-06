@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'sinatra'
-require 'sinatra/reloader'
+require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
 
@@ -10,19 +10,69 @@ configure do
   set :session_secret, SecureRandom.hex(32)
 end
 
+helpers do
+  # validates list name length
+  def invalid_list_name?(list_name)
+    !(1..100).cover?(list_name.size)
+  end
+
+  # validates the list name being unique
+  def list_name_exists?(list_name)
+    session[:lists].any? { |list| list[:name] == list_name }
+  end
+
+  # either returns nil if the name is valid, or the appropriate error message
+  def list_name_error(name)
+    if invalid_list_name?(name)
+      'The list name must be between 1 and 100 characters.'
+    elsif list_name_exists?(name)
+      'The list name you have chosen already exists. Please enter a new name.'
+    end
+  end
+  
+  # checks to see if the provided todo name is valid
+  def invalid_todo_name?(todo_name)
+    if !(1..100).cover?(todo_name.size)
+      "Todo must be between 1 and 100 characters."
+    end
+  end
+
+  # checks to see if all todos are completed
+  def all_todos_completed?(list)
+    list.all? { |todo| todo[:completed] == true } && list.size > 0
+  end
+
+  # assigns a value to the class attribute in our view templates
+  def list_class(list)
+    "complete" if all_todos_completed?(list)
+  end
+
+  # displays the number of completed todos out of the total todos
+  def display_num_completed_todos(list)
+    num_completed = list.select { |todo| todo[:completed] == true }.size
+    total_todos = list.size
+
+    "#{num_completed}/#{total_todos}"
+  end
+
+  # sorts the list of todos -- completed todos appear first in list
+  def sort_todo_list_by_completed!(list)
+    list[:todos].sort_by! do |todo|
+      todo[:completed] == true ? 0 : 1
+    end
+
+    list
+  end
+end
+
 before do
   session[:lists] ||= []
 end
 
+# redirects to lists page
 get '/' do
   redirect '/lists'
 end
-
-# GET    /lists                  --> view all lists
-# GET    /lists/new              --> new list form
-# POST   /lists                  --> create new lists
-# GET    /lists/1....            --> view a single list
-# GET    /list/(list number)     --> display the `todos` in the current list
 
 # views all of the lists
 get '/lists' do
@@ -115,7 +165,7 @@ post '/lists/:list_id/todos/:todo_id/delete' do
   @list = session[:lists][@list_id]
   @todo_id = params[:todo_id].to_i
 
-  @list[:todos].delete_at(todo_id)
+  @list[:todos].delete_at(@todo_id)
   session[:success] = "The todo has been deleted."
   redirect "/lists/#{@list_id}"
 end
@@ -142,43 +192,10 @@ post '/lists/:list_id/complete_all' do
   redirect "/lists/#{@list_id}"
 end
 
-helpers do
-  # validates list name length
-  def invalid_list_name?(list_name)
-    !(1..100).cover?(list_name.size)
-  end
+=begin
+{ name: list_name, todos: [{ name: todo, completed: false }] }
 
-  # validates the list name being unique
-  def list_name_exists?(list_name)
-    session[:lists].any? { |list| list[:name] == list_name }
-  end
-
-  # either returns nil if the name is valid, or the appropriate error message
-  def list_name_error(name)
-    if invalid_list_name?(name)
-      'The list name must be between 1 and 100 characters.'
-    elsif list_name_exists?(name)
-      'The list name you have chosen already exists. Please enter a new name.'
-    end
-  end
-  
-  # checks to see if the provided todo name is valid
-  def invalid_todo_name?(todo_name)
-    if !(1..100).cover?(todo_name.size)
-      "Todo must be between 1 and 100 characters."
-    end
-  end
-
-  # checks to see if all todos are completed
-  def all_todos_completed?(list)
-    list.all? { |todo| todo[:completed] == true }
-  end
-
-  # displays the number of completed todos out of the total todos
-  def display_num_completed_todos(list)
-    num_completed = list.select { |todo| todo[:completed] == true }.size
-    total_todos = list.size
-
-    "#{num_completed}/#{total_todos}"
-  end
-end
+we want to grab the list, and sort the `todos`
+name[:todos] => iterate through this
+  sort the list of todos by whether or not they're completed
+=end
