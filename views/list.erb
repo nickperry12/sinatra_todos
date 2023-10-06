@@ -1,19 +1,19 @@
+<% if all_todos_completed?(@list[:todos]) %>
+<section id="todos" class="complete">
+<% else %>
 <section id="todos">
+<% end %>
   <header>
     <h2><%= @list[:name] %></h2>
     <ul>
-      <% if @todo_id[:completed] %>
-        <li class="completed">
-      <% else %>
         <li>
-      <% end %>
-          <form action="/lists/<%= @list_id %>/todos/complete" method="post" value="true">
+          <form action="/lists/<%= @list_id %>/complete_all" method="post" value="true">
             <button class="check" type="submit">Complete All</button>
           </form>
         </li>
-      <li>
-        <a class="edit" href="/lists/<%= @list_id %>/edit">Edit List</a>
-      </li>  
+        <li>
+          <a class="edit" href="/lists/<%= @list_id %>/edit">Edit List</a>
+        </li>  
     </ul>
   </header>
   <ul>

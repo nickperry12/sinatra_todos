@@ -113,8 +113,8 @@ end
 post '/lists/:list_id/todos/:todo_id/delete' do
   @list_id = params[:list_id].to_i
   @list = session[:lists][@list_id]
+  @todo_id = params[:todo_id].to_i
 
-  todo_id = params[:todo_id].to_i
   @list[:todos].delete_at(todo_id)
   session[:success] = "The todo has been deleted."
   redirect "/lists/#{@list_id}"
@@ -133,21 +133,14 @@ post '/lists/:list_id/todos/:todo_id' do
 end
 
 # marks all todos as complete
-post '/lists/:list_id/todos/:todo_id/complete%20all' do
+post '/lists/:list_id/complete_all' do
   @list_id = params[:list_id].to_i
   @list = session[:lists][@list_id]
-  @todo_id = params[:todo_id].to_i
 
-  @list[:todos].each { |todo| todo[:completed] = "true" }
+  @list[:todos].each { |todo| todo[:completed] = true }
   session[:success] = "All todos have been completed."
   redirect "/lists/#{@list_id}"
 end
-
-=begin
-@list == { name: list_name, todos: [{name: todo_name, completed: true or false } <=(represented by todo_id), ] }
-
-@list[@list_id][todo_id][:completed] = true
-=end
 
 helpers do
   # validates list name length
@@ -174,5 +167,18 @@ helpers do
     if !(1..100).cover?(todo_name.size)
       "Todo must be between 1 and 100 characters."
     end
+  end
+
+  # checks to see if all todos are completed
+  def all_todos_completed?(list)
+    list.all? { |todo| todo[:completed] == true }
+  end
+
+  # displays the number of completed todos out of the total todos
+  def display_num_completed_todos(list)
+    num_completed = list.select { |todo| todo[:completed] == true }.size
+    total_todos = list.size
+
+    "#{num_completed}/#{total_todos}"
   end
 end
