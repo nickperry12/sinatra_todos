@@ -1,7 +1,7 @@
 <ul id="lists">
-  <% @lists.each_with_index do |list, idx| %>
+  <% @lists.each do |list| %>
     <li class="<%= list_class(list[:todos]) %>">
-      <a href="/lists/<%= idx %>">
+      <a href="/lists/<%= list[:list_id] %>">
         <h2><%= list[:name] %></h2>
         <p><%= display_num_completed_todos(list[:todos] )%></p>
       </a>  

@@ -65,19 +65,24 @@ helpers do
     list
   end
 
-  def load_list(list_id)
-    list = session[:lists][list_id] if list_id && session[:lists][list_id]
+  def load_list(id)
+    list = session[:lists].find { |list| list[:list_id] == id }
 
     return list if list
 
     session[:error] = "The specified list was not found."
     redirect "/lists"
   end
+end
 
-  def generate_todo_id(todos)
-    max = todos.map { |todo| todo[:id] }.max || 0
-    max + 1
-  end
+def generate_todo_id(todos)
+  max = todos.map { |todo| todo[:id] }.max || 0
+  max + 1
+end
+
+def generate_list_id(lists)
+  max = lists.map { |list| list[:list_id] }.max || 0
+  max + 1
 end
 
 before do
@@ -97,16 +102,7 @@ end
 
 # render the new list form
 get '/lists/new' do
-  erb :new_list
-end
-
-# render the todo list
-get "/lists/:id" do
-  @list_id = params[:id].to_i
-  @list = load_list(@list_id)
-  @todos = session[:lists][@list_id][:todos]
-
-  erb :list, layout: :layout
+  erb :new_list, layout: :layout
 end
 
 # creates a new list, redirects back to lists page
@@ -118,17 +114,25 @@ post '/lists' do
     session[:error] = error_message
     erb :new_list, layout: :layout
   else
-    session[:lists] << { name: list_name, todos: [] }
+    list_id = generate_list_id(session[:lists])
+    session[:lists] << { list_id: list_id, name: list_name, todos: [] }
     session[:success] = 'The list has been created.'
     redirect '/lists'
   end
 end
 
+# view a single todo list
+get "/lists/:id" do
+  @list_id = params[:id].to_i
+  @list = load_list(@list_id)
+  erb :list, layout: :layout
+end
+
+
 # edit an existing todo list
 get '/lists/:id/edit' do
   id = params[:id].to_i
-  @list = @list = load_list(id)
-
+  @list = load_list(id)
   erb :edit_list, layout: :layout
 end
 
@@ -152,19 +156,19 @@ end
 # deletes the current list from todo lists
 post "/lists/:id/delete" do
   id = params[:id].to_i
-  session[:lists].delete_at(id)
+  session[:lists].reject! { |list| list[:list_id] == id }
+  session[:success] = 'The list has been deleted.'
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     "/lists"
   else
-    session[:success] = 'The list has been deleted.'
     redirect "/lists"
   end
 end
 
 # add todo item to todo list
 post "/lists/:list_id/todos" do
-  @list_id = params[:list_id].to_i
   todo = params[:todo].strip
+  @list_id = params[:list_id].to_i
   @list = load_list(@list_id)
   error_message = invalid_todo_name?(todo)
   
@@ -185,7 +189,7 @@ post '/lists/:list_id/todos/:todo_id/delete' do
   @list = load_list(@list_id)
   @todo_id = params[:todo_id].to_i
 
-  @list[:todos].delete_at(@todo_id)
+  @list[:todos].reject! { |todo| todo[:id] == @todo_id }
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     status 204
   else
@@ -198,10 +202,11 @@ end
 post '/lists/:list_id/todos/:todo_id' do
   @list_id = params[:list_id].to_i
   @list = load_list(@list_id)
-  @todo_id = params[:todo_id].to_i
+  todo_id = params[:todo_id].to_i
 
   is_completed = params[:completed] == "true"
-  @list[:todos][@todo_id][:completed] = is_completed
+  todo = @list[:todos].find { |todo| todo[:id] == todo_id }
+  todo[:completed] = is_completed
   session[:success] = "The todo has been updated."
   redirect "/lists/#{@list_id}"
 end
@@ -217,9 +222,22 @@ post '/lists/:list_id/complete_all' do
 end
 
 =begin
+
+notes:
+
 { name: list_name, todos: [{ name: todo, completed: false }] }
 
 we want to grab the list, and sort the `todos`
 name[:todos] => iterate through this
   sort the list of todos by whether or not they're completed
+
+
+session => hash object
+session[:lists] => returns an array of nested hashes
+
+[{ list_id: id, name: list_name, todos: [{ name: todo, completed: false }] }, { list_id: id, name: list_name, todos: [{ name: todo, completed: false }] }]
+
+iterate through this list, |list|
+
+list[:list_id]
 =end
